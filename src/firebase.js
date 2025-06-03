@@ -6,9 +6,9 @@ import { getFirestore } from "firebase/firestore";
 // Encuéntrala en tu Consola de Firebase:
 // Configuración del proyecto (icono de engranaje) > Tus apps > Configuración (abajo)
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
+  apiKey: "AIzaSyAfF-MNOtgkK6lgG_WQdxcPni3MtcEvNVc",
   authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
+  projectId: "finanzasmul-8d731D",
   storageBucket: "TU_STORAGE_BUCKET",
   messagingSenderId: "TU_MESSAGING_SENDER_ID",
   appId: "TU_APP_ID"
