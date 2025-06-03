@@ -1,27 +1,11 @@
-// src/firebase.js
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-
-// TODO: Reemplaza esto con la configuración de TU proyecto Firebase
-// Encuéntrala en tu Consola de Firebase:
-// Configuración del proyecto (icono de engranaje) > Tus apps > Configuración (abajo)
-const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_AUTH_DOMAIN",
-  projectId: "TU_PROJECT_ID",
-  storageBucket: "TU_STORAGE_BUCKET",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID",
-  appId: "TU_APP_ID"
-};
-
-// Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-
-// Inicializar Firestore y exportarlo para usarlo en otros archivos
-export const db = getFirestore(app);
+// src/FinanceDashboard.js
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter } from 'lucide-react';
+
+// Importaciones de Firebase (¡asegúrate de que firebase.js esté en la misma carpeta src!)
+import { db } from './firebase';
+import { collection, onSnapshot, addDoc, query, orderBy } from "firebase/firestore";
 
 const FinanceDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -30,10 +14,8 @@ const FinanceDashboard = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [currentUser, setCurrentUser] = useState('');
   
-  // Estado para transacciones
   const [transactions, setTransactions] = useState([]);
   
-  // Estado para nueva transacción
   const [newTransaction, setNewTransaction] = useState({
     type: 'expense',
     amount: '',
@@ -42,42 +24,34 @@ const FinanceDashboard = () => {
     date: new Date().toISOString().split('T')[0]
   });
   
-  // Estado para metas financieras
   const [goals, setGoals] = useState([
     { id: 1, name: 'Fondo de Emergencia', target: 5000000, current: 2800000, category: 'Ahorro' },
     { id: 2, name: 'Vacaciones', target: 2000000, current: 750000, category: 'Objetivo' },
     { id: 3, name: 'Nuevo Laptop', target: 3500000, current: 1200000, category: 'Compra' }
   ]);
 
-  // Filtros
   const [dateFilter, setDateFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all'),// Cargar transacciones desde Firestore
-useEffect(() => {
-  // Creamos una referencia a la colección 'transactions' en Firestore, ordenada por fecha
-  const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+  const [categoryFilter, setCategoryFilter] = useState('all'); // <--- Error corregido: Se quitó la coma y el comentario de aquí
 
-  // onSnapshot escucha cambios en tiempo real
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const transactionsData = [];
-    querySnapshot.forEach((doc) => {
-      // Importante: guardamos el ID del documento y los datos
-      transactionsData.push({ ...doc.data(), id: doc.id });
+  // Cargar transacciones desde Firestore
+  useEffect(() => {
+    const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const transactionsData = [];
+      querySnapshot.forEach((doc) => {
+        transactionsData.push({ ...doc.data(), id: doc.id });
+      });
+      setTransactions(transactionsData);
     });
-    setTransactions(transactionsData);
-  });
+    return () => unsubscribe();
+  }, []);
 
-  // Función de limpieza para dejar de escuchar cuando el componente se desmonte
-  return () => unsubscribe();
-}, []); // El array vacío [] significa que este efecto se ejecuta solo una vez (al montar) ;
-
-  // Datos predefinidos de usuarios (en producción esto estaría en una base de datos)
   const users = {
     'admin': 'admin123',
     'usuario': 'password',
     'demo': 'demo'
   };
 
-  // Función de login
   const handleLogin = () => {
     if (users[username] && users[username] === password) {
       setIsLoggedIn(true);
@@ -87,7 +61,6 @@ useEffect(() => {
     }
   };
 
-  // Función de logout
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser('');
@@ -95,71 +68,41 @@ useEffect(() => {
     setPassword('');
   };
 
-  // Agregar nueva transacción
- const addTransaction = () => {
-  if (newTransaction.amount && newTransaction.category) {
-    // const transaction = {  // Ya no necesitamos crear el ID aquí
-    //   id: Date.now(),
-    //   ...newTransaction,
-    //   amount: parseFloat(newTransaction.amount)
-    // };
-    // setTransactions([...transactions, transaction]); // Ya no actualizamos así directamente
-
-    // NUEVO CÓDIGO PARA FIREBASE:
-    try {
-      // Preparamos el objeto a guardar, asegurando que amount sea número
-      const transactionToSave = {
-        ...newTransaction,
-        amount: parseFloat(newTransaction.amount),
-        // Opcional: añadir una marca de tiempo de cuándo se creó
-        // createdAt: new Date() // Firestore también tiene serverTimestamp()
-      };
-      // No incluimos el ID, Firestore lo generará
-
-      addDoc(collection(db, "transactions"), transactionToSave); // Guardamos en Firebase
-
-      // Limpiar el formulario
-      setNewTransaction({
-        type: 'expense',
-        amount: '',
-        category: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0]
-      });
-    } catch (e) {
-      console.error("Error adding document: ", e);
-      alert("Hubo un error al guardar la transacción.");
+  const addTransaction = () => {
+    if (newTransaction.amount && newTransaction.category) {
+      try {
+        const transactionToSave = {
+          ...newTransaction,
+          amount: parseFloat(newTransaction.amount),
+          // createdAt: new Date() // Opcional
+        };
+        addDoc(collection(db, "transactions"), transactionToSave);
+        setNewTransaction({
+          type: 'expense',
+          amount: '',
+          category: '',
+          description: '',
+          date: new Date().toISOString().split('T')[0]
+        });
+      } catch (e) {
+        console.error("Error adding document: ", e);
+        alert("Hubo un error al guardar la transacción.");
+      }
     }
-  }
-};
-      setTransactions([...transactions, transaction]);
-      setNewTransaction({
-        type: 'expense',
-        amount: '',
-        category: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0]
-      });
-    }
-  };
+  }; // <--- Error corregido: Se eliminó el código duplicado y mal cerrado después de esta función
 
-  // Filtrar transacciones
   const filteredTransactions = transactions.filter(t => {
     const dateMatch = dateFilter === 'all' || 
       (dateFilter === '30days' && new Date(t.date) >= new Date(Date.now() - 30*24*60*60*1000)) ||
       (dateFilter === '7days' && new Date(t.date) >= new Date(Date.now() - 7*24*60*60*1000));
-    
     const categoryMatch = categoryFilter === 'all' || t.category === categoryFilter;
-    
     return dateMatch && categoryMatch;
   });
 
-  // Cálculos estadísticos
   const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpenses;
 
-  // Datos para gráficos
   const expensesByCategory = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
@@ -173,6 +116,7 @@ useEffect(() => {
   }));
 
   const monthlyData = transactions.reduce((acc, t) => {
+    if (!t.date || typeof t.date !== 'string') return acc; // Agregada validación para t.date
     const month = t.date.substring(0, 7);
     if (!acc[month]) acc[month] = { month, income: 0, expenses: 0 };
     if (t.type === 'income') acc[month].income += t.amount;
@@ -184,7 +128,6 @@ useEffect(() => {
 
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff'];
 
-  // Manejar tecla Enter en el login
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleLogin();
@@ -195,6 +138,7 @@ useEffect(() => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20 shadow-2xl">
+          {/* ... (resto del JSX del login sin cambios) ... */}
           <div className="text-center mb-8">
             <div className="bg-gradient-to-r from-blue-400 to-purple-400 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <DollarSign className="text-white text-2xl" />
@@ -353,6 +297,7 @@ useEffect(() => {
               <option value="Vivienda">Vivienda</option>
               <option value="Alimentación">Alimentación</option>
               <option value="Transporte">Transporte</option>
+              {/* Podrías generar más opciones dinámicamente si quieres */}
             </select>
           </div>
         </div>
