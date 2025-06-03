@@ -14,8 +14,10 @@ const FinanceDashboard = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [currentUser, setCurrentUser] = useState('');
   
+  // Estado para transacciones (se llena desde Firebase)
   const [transactions, setTransactions] = useState([]);
   
+  // Estado para nueva transacción
   const [newTransaction, setNewTransaction] = useState({
     type: 'expense',
     amount: '',
@@ -24,14 +26,12 @@ const FinanceDashboard = () => {
     date: new Date().toISOString().split('T')[0]
   });
   
-  const [goals, setGoals] = useState([
-    { id: 1, name: 'Fondo de Emergencia', target: 5000000, current: 2800000, category: 'Ahorro' },
-    { id: 2, name: 'Vacaciones', target: 2000000, current: 750000, category: 'Objetivo' },
-    { id: 3, name: 'Nuevo Laptop', target: 3500000, current: 1200000, category: 'Compra' }
-  ]);
+  // Estado para metas financieras (empieza vacío)
+  const [goals, setGoals] = useState([]);
 
+  // Filtros
   const [dateFilter, setDateFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all'); // <--- Error corregido: Se quitó la coma y el comentario de aquí
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Cargar transacciones desde Firestore
   useEffect(() => {
@@ -46,12 +46,12 @@ const FinanceDashboard = () => {
     return () => unsubscribe();
   }, []);
 
+  // Usuario y contraseña personalizados
   const users = {
-    'admin': 'admin123',
-    'usuario': 'password',
-    'demo': 'demo'
+    'Mul': 'Rilidama2' // Único usuario y contraseña
   };
 
+  // Función de login
   const handleLogin = () => {
     if (users[username] && users[username] === password) {
       setIsLoggedIn(true);
@@ -61,6 +61,7 @@ const FinanceDashboard = () => {
     }
   };
 
+  // Función de logout
   const handleLogout = () => {
     setIsLoggedIn(false);
     setCurrentUser('');
@@ -68,16 +69,16 @@ const FinanceDashboard = () => {
     setPassword('');
   };
 
+  // Agregar nueva transacción (guarda en Firebase)
   const addTransaction = () => {
     if (newTransaction.amount && newTransaction.category) {
       try {
         const transactionToSave = {
           ...newTransaction,
           amount: parseFloat(newTransaction.amount),
-          // createdAt: new Date() // Opcional
         };
         addDoc(collection(db, "transactions"), transactionToSave);
-        setNewTransaction({
+        setNewTransaction({ // Limpiar el formulario
           type: 'expense',
           amount: '',
           category: '',
@@ -89,8 +90,9 @@ const FinanceDashboard = () => {
         alert("Hubo un error al guardar la transacción.");
       }
     }
-  }; // <--- Error corregido: Se eliminó el código duplicado y mal cerrado después de esta función
+  };
 
+  // Filtrar transacciones
   const filteredTransactions = transactions.filter(t => {
     const dateMatch = dateFilter === 'all' || 
       (dateFilter === '30days' && new Date(t.date) >= new Date(Date.now() - 30*24*60*60*1000)) ||
@@ -99,10 +101,12 @@ const FinanceDashboard = () => {
     return dateMatch && categoryMatch;
   });
 
+  // Cálculos estadísticos
   const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpenses;
 
+  // Datos para gráficos
   const expensesByCategory = filteredTransactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
@@ -116,7 +120,7 @@ const FinanceDashboard = () => {
   }));
 
   const monthlyData = transactions.reduce((acc, t) => {
-    if (!t.date || typeof t.date !== 'string') return acc; // Agregada validación para t.date
+    if (!t.date || typeof t.date !== 'string') return acc; 
     const month = t.date.substring(0, 7);
     if (!acc[month]) acc[month] = { month, income: 0, expenses: 0 };
     if (t.type === 'income') acc[month].income += t.amount;
@@ -128,17 +132,18 @@ const FinanceDashboard = () => {
 
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff'];
 
+  // Manejar tecla Enter en el login
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       handleLogin();
     }
   };
 
+  // --- Pantalla de Login ---
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20 shadow-2xl">
-          {/* ... (resto del JSX del login sin cambios) ... */}
           <div className="text-center mb-8">
             <div className="bg-gradient-to-r from-blue-400 to-purple-400 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <DollarSign className="text-white text-2xl" />
@@ -193,15 +198,14 @@ const FinanceDashboard = () => {
             </button>
           </div>
           
-          <div className="mt-6 text-center text-white/60 text-sm">
-            <p>Usuarios de demo:</p>
-            <p>admin/admin123 • usuario/password • demo/demo</p>
-          </div>
+          {/* La sección de usuarios de demo ha sido eliminada */}
+
         </div>
       </div>
     );
   }
 
+  // --- Dashboard Principal (después del login) ---
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -275,7 +279,6 @@ const FinanceDashboard = () => {
               <Filter size={20} className="text-gray-500" />
               <span className="text-gray-700 font-medium">Filtros:</span>
             </div>
-            
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
@@ -285,7 +288,6 @@ const FinanceDashboard = () => {
               <option value="7days">Últimos 7 días</option>
               <option value="30days">Últimos 30 días</option>
             </select>
-            
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
@@ -297,14 +299,12 @@ const FinanceDashboard = () => {
               <option value="Vivienda">Vivienda</option>
               <option value="Alimentación">Alimentación</option>
               <option value="Transporte">Transporte</option>
-              {/* Podrías generar más opciones dinámicamente si quieres */}
             </select>
           </div>
         </div>
 
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Gráfico de líneas - Ingresos vs Gastos */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Ingresos vs Gastos Mensuales</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -320,7 +320,6 @@ const FinanceDashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Gráfico de torta - Gastos por categoría */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Gastos por Categoría</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -345,11 +344,11 @@ const FinanceDashboard = () => {
           </div>
         </div>
 
-        {/* Metas financieras */}
+        {/* Metas financieras (se mostrará vacío porque goals es useState([]) ) */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-800 mb-6">Metas Financieras</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {goals.map(goal => {
+            {goals.map(goal => { 
               const progress = (goal.current / goal.target) * 100;
               return (
                 <div key={goal.id} className="border rounded-lg p-4">
@@ -388,7 +387,6 @@ const FinanceDashboard = () => {
               <option value="expense">Gasto</option>
               <option value="income">Ingreso</option>
             </select>
-            
             <input
               type="number"
               placeholder="Monto"
@@ -396,7 +394,6 @@ const FinanceDashboard = () => {
               onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            
             <input
               type="text"
               placeholder="Categoría"
@@ -404,14 +401,12 @@ const FinanceDashboard = () => {
               onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            
             <input
               type="date"
               value={newTransaction.date}
               onChange={(e) => setNewTransaction({...newTransaction, date: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            
             <button
               onClick={addTransaction}
               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
