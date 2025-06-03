@@ -1,3 +1,24 @@
+// src/firebase.js
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+
+// TODO: Reemplaza esto con la configuración de TU proyecto Firebase
+// Encuéntrala en tu Consola de Firebase:
+// Configuración del proyecto (icono de engranaje) > Tus apps > Configuración (abajo)
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_STORAGE_BUCKET",
+  messagingSenderId: "TU_MESSAGING_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+
+// Inicializar Firestore y exportarlo para usarlo en otros archivos
+export const db = getFirestore(app);
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter } from 'lucide-react';
@@ -10,13 +31,7 @@ const FinanceDashboard = () => {
   const [currentUser, setCurrentUser] = useState('');
   
   // Estado para transacciones
-  const [transactions, setTransactions] = useState([
-    { id: 1, type: 'income', amount: 3500000, category: 'Salario', date: '2025-06-01', description: 'Sueldo mensual' },
-    { id: 2, type: 'expense', amount: 800000, category: 'Vivienda', date: '2025-06-01', description: 'Arriendo' },
-    { id: 3, type: 'expense', amount: 250000, category: 'Alimentación', date: '2025-06-02', description: 'Mercado' },
-    { id: 4, type: 'expense', amount: 150000, category: 'Transporte', date: '2025-05-30', description: 'Gasolina' },
-    { id: 5, type: 'income', amount: 500000, category: 'Freelance', date: '2025-05-28', description: 'Proyecto web' },
-  ]);
+  const [transactions, setTransactions] = useState([]);
   
   // Estado para nueva transacción
   const [newTransaction, setNewTransaction] = useState({
@@ -36,7 +51,24 @@ const FinanceDashboard = () => {
 
   // Filtros
   const [dateFilter, setDateFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all'),// Cargar transacciones desde Firestore
+useEffect(() => {
+  // Creamos una referencia a la colección 'transactions' en Firestore, ordenada por fecha
+  const q = query(collection(db, "transactions"), orderBy("date", "desc"));
+
+  // onSnapshot escucha cambios en tiempo real
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const transactionsData = [];
+    querySnapshot.forEach((doc) => {
+      // Importante: guardamos el ID del documento y los datos
+      transactionsData.push({ ...doc.data(), id: doc.id });
+    });
+    setTransactions(transactionsData);
+  });
+
+  // Función de limpieza para dejar de escuchar cuando el componente se desmonte
+  return () => unsubscribe();
+}, []); // El array vacío [] significa que este efecto se ejecuta solo una vez (al montar) ;
 
   // Datos predefinidos de usuarios (en producción esto estaría en una base de datos)
   const users = {
@@ -64,13 +96,42 @@ const FinanceDashboard = () => {
   };
 
   // Agregar nueva transacción
-  const addTransaction = () => {
-    if (newTransaction.amount && newTransaction.category) {
-      const transaction = {
-        id: Date.now(),
+ const addTransaction = () => {
+  if (newTransaction.amount && newTransaction.category) {
+    // const transaction = {  // Ya no necesitamos crear el ID aquí
+    //   id: Date.now(),
+    //   ...newTransaction,
+    //   amount: parseFloat(newTransaction.amount)
+    // };
+    // setTransactions([...transactions, transaction]); // Ya no actualizamos así directamente
+
+    // NUEVO CÓDIGO PARA FIREBASE:
+    try {
+      // Preparamos el objeto a guardar, asegurando que amount sea número
+      const transactionToSave = {
         ...newTransaction,
-        amount: parseFloat(newTransaction.amount)
+        amount: parseFloat(newTransaction.amount),
+        // Opcional: añadir una marca de tiempo de cuándo se creó
+        // createdAt: new Date() // Firestore también tiene serverTimestamp()
       };
+      // No incluimos el ID, Firestore lo generará
+
+      addDoc(collection(db, "transactions"), transactionToSave); // Guardamos en Firebase
+
+      // Limpiar el formulario
+      setNewTransaction({
+        type: 'expense',
+        amount: '',
+        category: '',
+        description: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      alert("Hubo un error al guardar la transacción.");
+    }
+  }
+};
       setTransactions([...transactions, transaction]);
       setNewTransaction({
         type: 'expense',
