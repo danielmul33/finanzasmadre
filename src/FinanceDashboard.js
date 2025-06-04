@@ -11,7 +11,7 @@ import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc, updateD
 const logoUrl = "https://raw.githubusercontent.com/danielmul33/logocognito/69d10a48524821d1f9116403a5d7cdf389496b36/D18E0756-E128-496F-9A0C-A5EC6DF9CAB7.PNG";
 
 const FinanceDashboard = () => {
-  // --- Estados (sin cambios en su lógica, solo la UI se verá afectada) ---
+  // --- Estados ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -174,10 +174,10 @@ const FinanceDashboard = () => {
     });
   }, [pockets, transactions]);
 
-  // --- Colores y Formato (Adaptados a tema claro con acentos púrpura pastel) ---
-  const chartTextAndStrokeColor = "#6b7280"; // Tailwind gray-500
-  const chartGridColor = "#e5e7eb";      // Tailwind gray-200
-  const PIE_CHART_COLORS = ['#a78bfa', '#c084fc', '#f0abfc', '#4ade80', '#60a5fa', '#fbbf24']; // violet-400, purple-400, fuchsia-300, green-400, blue-400, amber-400
+  // --- Colores y Formato ---
+  const chartTextAndStrokeColor = "#6b7280"; 
+  const chartGridColor = "#e5e7eb";      
+  const PIE_CHART_COLORS = ['#a78bfa', '#c084fc', '#f0abfc', '#4ade80', '#60a5fa', '#fbbf24']; 
 
   const formatCurrency = (value, currencyCode = 'COP') => { /* ... (igual que antes) ... */ 
     const options = { style: 'currency', currency: currencyCode, minimumFractionDigits: 0, maximumFractionDigits: 0 };
@@ -189,15 +189,21 @@ const FinanceDashboard = () => {
     if (e.key === 'Enter') { handleLogin(); }
   };
 
-  // --- PANTALLA DE LOGIN (NUEVO ESTILO PASTEL) ---
+  // --- PANTALLA DE LOGIN (CON AJUSTE EN EL CONTENEDOR DEL LOGO) ---
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-violet-200 flex items-center justify-center p-4 font-sans">
         <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 sm:p-10 w-full max-w-md shadow-2xl border border-purple-200/50">
           <div className="text-center mb-10">
-            <div className="bg-gradient-to-br from-purple-500 to-violet-600 p-3 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center shadow-lg">
-              {logoUrl ? <img src={logoUrl} alt="Logo Estamos Benditos" className="h-12 w-12 rounded-full object-cover" /> : <DollarSign className="text-white text-3xl" />}
+            {/* --- CONTENEDOR DEL LOGO MODIFICADO --- */}
+            <div className="bg-white p-2 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center shadow-lg border border-gray-200">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo Estamos Benditos" className="h-16 w-16 object-contain rounded-full" />
+              ) : (
+                <DollarSign className="text-purple-500 text-4xl" /> // Icono de fallback
+              )}
             </div>
+            {/* --- FIN CONTENEDOR DEL LOGO MODIFICADO --- */}
             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-500 to-violet-600 mb-2">
               Estamos Benditos
             </h1>
@@ -236,9 +242,14 @@ const FinanceDashboard = () => {
   }
 
   // --- DASHBOARD PRINCIPAL (ESTILO PASTEL PÚRPURA Y BLANCO) ---
+  // El resto del JSX del dashboard principal se mantiene igual que en la última versión que te di,
+  // ya que los estilos pastel púrpura y blanco ya se aplicaron allí.
+  // Solo he copiado la parte del login aquí arriba con el cambio del logo.
+  // Asegúrate de que el resto del dashboard (header, tarjetas, formularios, tablas, etc.)
+  // esté como en el código completo que te di en el mensaje anterior (el que empezaba con // src/FinanceDashboard.js y tenía todo el estilo pastel)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-violet-100 text-slate-800 font-sans">
-      {/* Encabezado */}
       <header className="bg-white shadow-md sticky top-0 z-50 border-b border-purple-100">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -258,7 +269,6 @@ const FinanceDashboard = () => {
         </div>
       </header>
 
-      {/* Contenido Principal del Dashboard */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tarjetas de resumen */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -311,8 +321,8 @@ const FinanceDashboard = () => {
                 <YAxis stroke={chartTextAndStrokeColor} tickFormatter={(value) => formatCurrency(value, 'COP').replace('COP','').trim()} tick={{ fill: chartTextAndStrokeColor, fontSize: 12 }} />
                 <Tooltip contentStyle={{ backgroundColor: 'rgba(255,255,255,0.9)', border: `1px solid ${chartGridColor}`, borderRadius: '0.5rem' }} itemStyle={{ color: '#333' }} labelStyle={{ color: '#6d28d9', fontWeight: 'bold' }} formatter={(value) => formatCurrency(value, 'COP')} />
                 <Legend wrapperStyle={{ color: chartTextAndStrokeColor, fontSize: 12 }} />
-                <Line type="monotone" dataKey="income" stroke="#6366f1" strokeWidth={3} name="Ingresos" dot={{ r: 4, fill: "#6366f1", stroke: chartGridColor }} activeDot={{ r: 7, stroke: '#8b5cf6', strokeWidth: 2 }} />
-                <Line type="monotone" dataKey="expenses" stroke="#f0abfc" strokeWidth={3} name="Gastos" dot={{ r: 4, fill: "#f0abfc", stroke: chartGridColor }} activeDot={{ r: 7, stroke: '#c084fc', strokeWidth: 2 }}/>
+                <Line type="monotone" dataKey="income" stroke="#8b5cf6" strokeWidth={3} name="Ingresos" dot={{ r: 4, fill: "#8b5cf6", stroke: chartGridColor }} activeDot={{ r: 7, stroke: '#a78bfa', strokeWidth: 2 }} />
+                <Line type="monotone" dataKey="expenses" stroke="#fb7185" strokeWidth={3} name="Gastos" dot={{ r: 4, fill: "#fb7185", stroke: chartGridColor }} activeDot={{ r: 7, stroke: '#f472b6', strokeWidth: 2 }}/>
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -423,7 +433,7 @@ const FinanceDashboard = () => {
                         <td className="py-3 px-4">{transaction.category}</td>
                         <td className="py-3 px-4 truncate max-w-xs" title={transaction.description}>{transaction.description}</td>
                         <td className={`py-3 px-4 text-right font-semibold ${ transaction.type === 'income' ? 'text-green-600' : 'text-red-600' }`}>{transaction.type === 'income' ? '+' : ''}{amountDisplay}</td>
-                        <td className="py-3 px-4 text-center"><button onClick={() => handleDeleteTransaction(transaction.id)} className="text-red-500 hover:text-red-700 transition-colors" title="Eliminar transacción"><Trash2 size={18} /></button></td>
+                        <td className="py-3 px-4 text-center"><button onClick={() => handleDeleteTransaction(transaction.id)} className="text-pink-500 hover:text-pink-700 transition-colors" title="Eliminar transacción"><Trash2 size={18} /></button></td>
                       </tr>
                     );
                 })}
