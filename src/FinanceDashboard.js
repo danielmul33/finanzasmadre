@@ -1,11 +1,11 @@
 // src/FinanceDashboard.js
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter, Trash2 } from 'lucide-react'; // <--- Se añadió Trash2
+import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter, Trash2 } from 'lucide-react'; // <--- Se añadió Trash2 aquí
 
 // Importaciones de Firebase
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc } from "firebase/firestore"; // <--- Se añadió doc y deleteDoc
+import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc } from "firebase/firestore"; // <--- Se añadió doc y deleteDoc aquí
 
 const FinanceDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -89,8 +89,8 @@ const FinanceDashboard = () => {
       try {
         const transactionDocRef = doc(db, "transactions", transactionId);
         await deleteDoc(transactionDocRef);
-        // onSnapshot se encargará de actualizar la lista automáticamente
-        console.log("Transacción eliminada con ID: ", transactionId);
+        // onSnapshot se encargará de actualizar la lista automáticamente porque detecta el cambio en Firebase
+        console.log("Transacción eliminada con ID: ", transactionId); 
       } catch (e) {
         console.error("Error deleting document: ", e);
         alert("Hubo un error al eliminar la transacción.");
@@ -144,7 +144,6 @@ const FinanceDashboard = () => {
 
   if (!isLoggedIn) {
     return (
-      // ... (El JSX del Login no cambia, se mantiene igual)
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20 shadow-2xl">
           <div className="text-center mb-8">
@@ -204,7 +203,6 @@ const FinanceDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ... (El Header no cambia) ... */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -223,9 +221,9 @@ const FinanceDashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ... (Tarjetas de resumen, Filtros, Gráficos, Metas, Nueva Transacción no cambian en su JSX) ... */}
-        {/* Tarjetas de resumen */}
+        {/* Tarjetas de resumen, Filtros, Gráficos, Metas, Form Nueva Transacción (sin cambios en su estructura) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* ... (código de tarjetas de resumen igual que antes) ... */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
@@ -256,4 +254,210 @@ const FinanceDashboard = () => {
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-            <div className
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Transacciones</p>
+                <p className="text-2xl font-bold text-purple-600">{filteredTransactions.length}</p>
+              </div>
+              <CreditCard className="text-purple-500" size={32} />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Filtros */}
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center space-x-2">
+              <Filter size={20} className="text-gray-500" />
+              <span className="text-gray-700 font-medium">Filtros:</span>
+            </div>
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="all">Todas las fechas</option>
+              <option value="7days">Últimos 7 días</option>
+              <option value="30days">Últimos 30 días</option>
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="all">Todas las categorías</option>
+              <option value="Salario">Salario</option>
+              <option value="Freelance">Freelance</option>
+              <option value="Vivienda">Vivienda</option>
+              <option value="Alimentación">Alimentación</option>
+              <option value="Transporte">Transporte</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"> {/* Gráficos */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Ingresos vs Gastos Mensuales</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                <Legend />
+                <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} name="Ingresos" />
+                <Line type="monotone" dataKey="expenses" stroke="#f59e0b" strokeWidth={3} name="Gastos" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Gastos por Categoría</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Metas */}
+          <h3 className="text-xl font-bold text-gray-800 mb-6">Metas Financieras</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {goals.map(goal => { 
+              const progress = (goal.current / goal.target) * 100;
+              return (
+                <div key={goal.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-lg font-semibold text-gray-800">{goal.name}</h4>
+                    <Target className="text-blue-500" size={20} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>${goal.current.toLocaleString()}</span>
+                      <span>${goal.target.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(progress, 100)}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-gray-600">{progress.toFixed(1)}% completado</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Nueva Transacción Form */}
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Agregar Nueva Transacción</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <select
+              value={newTransaction.type}
+              onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="expense">Gasto</option>
+              <option value="income">Ingreso</option>
+            </select>
+            <input
+              type="number"
+              placeholder="Monto"
+              value={newTransaction.amount}
+              onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <input
+              type="text"
+              placeholder="Categoría"
+              value={newTransaction.category}
+              onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <input
+              type="date"
+              value={newTransaction.date}
+              onChange={(e) => setNewTransaction({...newTransaction, date: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <button
+              onClick={addTransaction}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+            >
+              <Plus size={20} />
+              <span>Agregar</span>
+            </button>
+          </div>
+        </div>
+
+        {/* --- MODIFICACIÓN: Lista de transacciones recientes CON BOTÓN DE ELIMINAR --- */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Transacciones Recientes</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Tipo</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoría</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Descripción</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Monto</th>
+                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Acciones</th> {/* <-- Nueva columna */}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTransactions.slice(-10).reverse().map(transaction => (
+                  <tr key={transaction.id} className="border-b hover:bg-gray-50">
+                    <td className="py-3 px-4 text-gray-600">{transaction.date}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        transaction.type === 'income' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-gray-600">{transaction.category}</td>
+                    <td className="py-3 px-4 text-gray-600">{transaction.description}</td>
+                    <td className={`py-3 px-4 text-right font-semibold ${
+                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-center"> {/* <-- Nueva celda con el botón */}
+                      <button
+                        onClick={() => handleDeleteTransaction(transaction.id)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Eliminar transacción"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {/* --- FIN DE MODIFICACIÓN --- */}
+      </div>
+    </div>
+  );
+};
+
+export default FinanceDashboard;
