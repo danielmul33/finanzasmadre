@@ -1,11 +1,11 @@
 // src/FinanceDashboard.js
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter, Trash2 } from 'lucide-react'; // <--- Se añadió Trash2 aquí
+import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter, Trash2 } from 'lucide-react';
 
 // Importaciones de Firebase
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc } from "firebase/firestore"; // <--- Se añadió doc y deleteDoc aquí
+import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc } from "firebase/firestore";
 
 const FinanceDashboard = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -20,7 +20,7 @@ const FinanceDashboard = () => {
     type: 'expense',
     amount: '',
     category: '',
-    description: '',
+    description: '', // Ya estaba aquí, ¡listo para usarse!
     date: new Date().toISOString().split('T')[0]
   });
   
@@ -65,7 +65,7 @@ const FinanceDashboard = () => {
     if (newTransaction.amount && newTransaction.category) {
       try {
         const transactionToSave = {
-          ...newTransaction,
+          ...newTransaction, // description ya viene aquí si se llenó el campo
           amount: parseFloat(newTransaction.amount),
         };
         addDoc(collection(db, "transactions"), transactionToSave);
@@ -83,13 +83,11 @@ const FinanceDashboard = () => {
     }
   };
 
-  // --- NUEVA FUNCIÓN PARA ELIMINAR TRANSACCIONES ---
   const handleDeleteTransaction = async (transactionId) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar esta transacción?")) {
       try {
         const transactionDocRef = doc(db, "transactions", transactionId);
         await deleteDoc(transactionDocRef);
-        // onSnapshot se encargará de actualizar la lista automáticamente porque detecta el cambio en Firebase
         console.log("Transacción eliminada con ID: ", transactionId); 
       } catch (e) {
         console.error("Error deleting document: ", e);
@@ -97,7 +95,6 @@ const FinanceDashboard = () => {
       }
     }
   };
-  // --- FIN DE NUEVA FUNCIÓN ---
 
   const filteredTransactions = transactions.filter(t => {
     const dateMatch = dateFilter === 'all' || 
@@ -144,6 +141,7 @@ const FinanceDashboard = () => {
 
   if (!isLoggedIn) {
     return (
+      // ... (El JSX del Login no cambia, se mantiene igual que en la última versión)
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20 shadow-2xl">
           <div className="text-center mb-8">
@@ -204,6 +202,7 @@ const FinanceDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
+        {/* ... (El Header no cambia) ... */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <h1 className="text-2xl font-bold text-gray-900">Dashboard Financiero</h1>
@@ -221,9 +220,9 @@ const FinanceDashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tarjetas de resumen, Filtros, Gráficos, Metas, Form Nueva Transacción (sin cambios en su estructura) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* ... (código de tarjetas de resumen igual que antes) ... */}
+        {/* ... (Tarjetas de resumen, Filtros, Gráficos, Metas no cambian en su JSX) ... */}
+         {/* Tarjetas de resumen */}
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
@@ -264,7 +263,8 @@ const FinanceDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Filtros */}
+        {/* Filtros */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center space-x-2">
               <Filter size={20} className="text-gray-500" />
@@ -294,7 +294,8 @@ const FinanceDashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"> {/* Gráficos */}
+        {/* Gráficos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Ingresos vs Gastos Mensuales</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -333,7 +334,8 @@ const FinanceDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Metas */}
+        {/* Metas financieras */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-800 mb-6">Metas Financieras</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {goals.map(goal => { 
@@ -362,10 +364,12 @@ const FinanceDashboard = () => {
             })}
           </div>
         </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Nueva Transacción Form */}
+        
+        {/* --- MODIFICACIÓN: Formulario "Nueva transacción" CON CAMPO DE DESCRIPCIÓN --- */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Agregar Nueva Transacción</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Ajustado a 6 columnas en lg para acomodar el nuevo campo y el botón en una línea si es posible */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
             <select
               value={newTransaction.type}
               onChange={(e) => setNewTransaction({...newTransaction, type: e.target.value})}
@@ -388,6 +392,15 @@ const FinanceDashboard = () => {
               onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
+            {/* NUEVO CAMPO DE DESCRIPCIÓN */}
+            <input
+              type="text"
+              placeholder="Descripción (Opcional)"
+              value={newTransaction.description}
+              onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 md:col-span-2 lg:col-span-1" 
+              // Ocupa más espacio en md, normal en lg dentro de las 6 columnas
+            />
             <input
               type="date"
               value={newTransaction.date}
@@ -403,8 +416,9 @@ const FinanceDashboard = () => {
             </button>
           </div>
         </div>
+        {/* --- FIN DE MODIFICACIÓN DEL FORMULARIO --- */}
 
-        {/* --- MODIFICACIÓN: Lista de transacciones recientes CON BOTÓN DE ELIMINAR --- */}
+        {/* Lista de transacciones recientes CON BOTÓN DE ELIMINAR */}
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Transacciones Recientes</h3>
           <div className="overflow-x-auto">
@@ -414,9 +428,9 @@ const FinanceDashboard = () => {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Tipo</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoría</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Descripción</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Descripción</th> {/* Esta columna ya existía y muestra la descripción */}
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Monto</th>
-                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Acciones</th> {/* <-- Nueva columna */}
+                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -433,13 +447,13 @@ const FinanceDashboard = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-600">{transaction.category}</td>
-                    <td className="py-3 px-4 text-gray-600">{transaction.description}</td>
+                    <td className="py-3 px-4 text-gray-600">{transaction.description}</td> {/* Se muestra la descripción */}
                     <td className={`py-3 px-4 text-right font-semibold ${
                       transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
                     </td>
-                    <td className="py-3 px-4 text-center"> {/* <-- Nueva celda con el botón */}
+                    <td className="py-3 px-4 text-center">
                       <button
                         onClick={() => handleDeleteTransaction(transaction.id)}
                         className="text-red-500 hover:text-red-700"
@@ -454,7 +468,6 @@ const FinanceDashboard = () => {
             </table>
           </div>
         </div>
-        {/* --- FIN DE MODIFICACIÓN --- */}
       </div>
     </div>
   );
