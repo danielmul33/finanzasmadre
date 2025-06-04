@@ -18,4 +18,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 // Inicializar Firestore y exportarlo para usarlo en otros archivos
-export const db = getFirestore(app);
+export const db = getFirestore(app, 'mis-finanzas-db');
