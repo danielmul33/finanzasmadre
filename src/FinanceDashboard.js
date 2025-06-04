@@ -1,34 +1,38 @@
 // src/FinanceDashboard.js
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter, Trash2 } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Plus, Minus, TrendingUp, TrendingDown, DollarSign, CreditCard, PiggyBank, Target, Calendar, Filter, Trash2, Edit3, Save } from 'lucide-react'; // Se añadió Edit3 y Save (aunque Save no se usará directamente aún)
 
 // Importaciones de Firebase
 import { db } from './firebase';
-import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, query, orderBy, doc, deleteDoc, updateDoc, Timestamp } from "firebase/firestore"; // Se añadió updateDoc y Timestamp
 
 const FinanceDashboard = () => {
+  // Estados de Login y Usuario
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [currentUser, setCurrentUser] = useState('');
   
+  // Estado para transacciones
   const [transactions, setTransactions] = useState([]);
-  
   const [newTransaction, setNewTransaction] = useState({
-    type: 'expense',
-    amount: '',
-    category: '',
-    description: '', // Ya estaba aquí, ¡listo para usarse!
-    date: new Date().toISOString().split('T')[0]
+    type: 'expense', amount: '', category: '', description: '', date: new Date().toISOString().split('T')[0]
   });
   
+  // --- NUEVOS ESTADOS PARA METAS ---
   const [goals, setGoals] = useState([]);
+  const [showAddGoalForm, setShowAddGoalForm] = useState(false);
+  const [newGoal, setNewGoal] = useState({ name: '', targetAmount: '', currentAmount: '' });
+  const [amountToAdd, setAmountToAdd] = useState({}); // Para manejar el monto a añadir a cada meta { goalId: amount }
+  // --- FIN DE NUEVOS ESTADOS PARA METAS ---
 
+  // Estados para Filtros
   const [dateFilter, setDateFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  // Cargar transacciones desde Firestore
   useEffect(() => {
     const q = query(collection(db, "transactions"), orderBy("date", "desc"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -38,14 +42,32 @@ const FinanceDashboard = () => {
       });
       setTransactions(transactionsData);
     });
-    return () => unsubscribe();
+    return () => unsubscribe(); // Limpieza al desmontar
   }, []);
 
-  const users = {
-    'Mul': 'Rilidama2'
-  };
+  // --- NUEVO useEffect PARA CARGAR METAS DESDE FIRESTORE ---
+  useEffect(() => {
+    const q = query(collection(db, "goals"), orderBy("createdAt", "desc")); // Ordenar por fecha de creación
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const goalsData = [];
+      querySnapshot.forEach((doc) => {
+        goalsData.push({ 
+          ...doc.data(), 
+          id: doc.id,
+          // Asegurarse que los montos sean números
+          targetAmount: parseFloat(doc.data().targetAmount) || 0,
+          currentAmount: parseFloat(doc.data().currentAmount) || 0,
+        });
+      });
+      setGoals(goalsData);
+    });
+    return () => unsubscribe(); // Limpieza al desmontar
+  }, []);
+  // --- FIN DE useEffect PARA METAS ---
 
-  const handleLogin = () => {
+  const users = { 'Mul': 'Rilidama2' };
+
+  const handleLogin = () => { /* ... (sin cambios) ... */ 
     if (users[username] && users[username] === password) {
       setIsLoggedIn(true);
       setCurrentUser(username);
@@ -53,28 +75,22 @@ const FinanceDashboard = () => {
       alert('Usuario o contraseña incorrectos');
     }
   };
-
-  const handleLogout = () => {
+  const handleLogout = () => { /* ... (sin cambios) ... */ 
     setIsLoggedIn(false);
     setCurrentUser('');
     setUsername('');
     setPassword('');
   };
-
-  const addTransaction = () => {
+  const addTransaction = () => { /* ... (sin cambios) ... */ 
     if (newTransaction.amount && newTransaction.category) {
       try {
         const transactionToSave = {
-          ...newTransaction, // description ya viene aquí si se llenó el campo
+          ...newTransaction,
           amount: parseFloat(newTransaction.amount),
         };
         addDoc(collection(db, "transactions"), transactionToSave);
         setNewTransaction({
-          type: 'expense',
-          amount: '',
-          category: '',
-          description: '',
-          date: new Date().toISOString().split('T')[0]
+          type: 'expense', amount: '', category: '', description: '', date: new Date().toISOString().split('T')[0]
         });
       } catch (e) {
         console.error("Error adding document: ", e);
@@ -82,8 +98,7 @@ const FinanceDashboard = () => {
       }
     }
   };
-
-  const handleDeleteTransaction = async (transactionId) => {
+  const handleDeleteTransaction = async (transactionId) => { /* ... (sin cambios) ... */ 
     if (window.confirm("¿Estás seguro de que quieres eliminar esta transacción?")) {
       try {
         const transactionDocRef = doc(db, "transactions", transactionId);
@@ -96,31 +111,80 @@ const FinanceDashboard = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter(t => {
+  // --- NUEVAS FUNCIONES PARA GESTIONAR METAS ---
+  const handleAddGoal = async () => {
+    if (newGoal.name && newGoal.targetAmount) {
+      try {
+        const goalToSave = {
+          name: newGoal.name,
+          targetAmount: parseFloat(newGoal.targetAmount),
+          currentAmount: parseFloat(newGoal.currentAmount) || 0, // Si está vacío, es 0
+          createdAt: Timestamp.fromDate(new Date()) // Fecha de creación
+        };
+        await addDoc(collection(db, "goals"), goalToSave);
+        setNewGoal({ name: '', targetAmount: '', currentAmount: '' }); // Limpiar formulario
+        setShowAddGoalForm(false); // Ocultar formulario
+      } catch (e) {
+        console.error("Error adding goal: ", e);
+        alert("Hubo un error al guardar la meta.");
+      }
+    } else {
+      alert("Por favor, completa el nombre y el monto objetivo de la meta.");
+    }
+  };
+
+  const handleUpdateGoalProgress = async (goalId, currentProgress, amountString) => {
+    const additionalAmount = parseFloat(amountString);
+    if (isNaN(additionalAmount) || additionalAmount <= 0) {
+      alert("Por favor, ingresa un monto válido para añadir al progreso.");
+      return;
+    }
+    try {
+      const goalDocRef = doc(db, "goals", goalId);
+      const newCurrentAmount = (parseFloat(currentProgress) || 0) + additionalAmount;
+      await updateDoc(goalDocRef, {
+        currentAmount: newCurrentAmount
+      });
+      // Limpiar el input específico para esta meta
+      setAmountToAdd(prev => ({ ...prev, [goalId]: '' })); 
+      console.log("Progreso de meta actualizado.");
+    } catch (e) {
+      console.error("Error updating goal progress: ", e);
+      alert("Hubo un error al actualizar el progreso de la meta.");
+    }
+  };
+  
+  const handleDeleteGoal = async (goalId) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar esta meta?")) {
+      try {
+        const goalDocRef = doc(db, "goals", goalId);
+        await deleteDoc(goalDocRef);
+        console.log("Meta eliminada con ID: ", goalId);
+      } catch (e) {
+        console.error("Error deleting goal: ", e);
+        alert("Hubo un error al eliminar la meta.");
+      }
+    }
+  };
+  // --- FIN DE NUEVAS FUNCIONES PARA METAS ---
+
+  // Lógica de filtros y cálculos estadísticos (sin cambios)
+  const filteredTransactions = transactions.filter(t => { /* ... */ 
     const dateMatch = dateFilter === 'all' || 
       (dateFilter === '30days' && new Date(t.date) >= new Date(Date.now() - 30*24*60*60*1000)) ||
       (dateFilter === '7days' && new Date(t.date) >= new Date(Date.now() - 7*24*60*60*1000));
     const categoryMatch = categoryFilter === 'all' || t.category === categoryFilter;
     return dateMatch && categoryMatch;
   });
-
   const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
   const totalExpenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpenses;
-
-  const expensesByCategory = filteredTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => {
+  const expensesByCategory = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => { /* ... */ 
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
     }, {});
-
-  const pieData = Object.entries(expensesByCategory).map(([category, amount]) => ({
-    name: category,
-    value: amount
-  }));
-
-  const monthlyData = transactions.reduce((acc, t) => {
+  const pieData = Object.entries(expensesByCategory).map(([category, amount]) => ({ name: category, value: amount }));
+  const monthlyData = transactions.reduce((acc, t) => { /* ... */ 
     if (!t.date || typeof t.date !== 'string') return acc; 
     const month = t.date.substring(0, 7);
     if (!acc[month]) acc[month] = { month, income: 0, expenses: 0 };
@@ -128,20 +192,16 @@ const FinanceDashboard = () => {
     else acc[month].expenses += t.amount;
     return acc;
   }, {});
-
   const chartData = Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
-
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff'];
-
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e) => { /* ... (sin cambios) ... */ 
     if (e.key === 'Enter') {
       handleLogin();
     }
   };
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn) { /* ... (JSX del Login sin cambios) ... */ 
     return (
-      // ... (El JSX del Login no cambia, se mantiene igual que en la última versión)
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 w-full max-w-md border border-white/20 shadow-2xl">
           <div className="text-center mb-8">
@@ -199,10 +259,10 @@ const FinanceDashboard = () => {
     );
   }
 
+  // --- DASHBOARD PRINCIPAL ---
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        {/* ... (El Header no cambia) ... */}
+      <header className="bg-white shadow-sm border-b"> {/* ... (Header sin cambios) ... */} 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <h1 className="text-2xl font-bold text-gray-900">Dashboard Financiero</h1>
@@ -220,9 +280,8 @@ const FinanceDashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ... (Tarjetas de resumen, Filtros, Gráficos, Metas no cambian en su JSX) ... */}
-         {/* Tarjetas de resumen */}
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* ... (Tarjetas de resumen, Filtros, Gráficos: sin cambios en su estructura JSX) ... */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
             <div className="flex items-center justify-between">
               <div>
@@ -263,7 +322,6 @@ const FinanceDashboard = () => {
           </div>
         </div>
 
-        {/* Filtros */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center space-x-2">
@@ -294,7 +352,6 @@ const FinanceDashboard = () => {
           </div>
         </div>
 
-        {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Ingresos vs Gastos Mensuales</h3>
@@ -333,42 +390,111 @@ const FinanceDashboard = () => {
             </ResponsiveContainer>
           </div>
         </div>
-
-        {/* Metas financieras */}
+        
+        {/* --- SECCIÓN DE METAS FINANCIERAS MODIFICADA --- */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-6">Metas Financieras</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-800">Metas Financieras</h3>
+            <button
+              onClick={() => setShowAddGoalForm(!showAddGoalForm)}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
+            >
+              {showAddGoalForm ? <Minus size={20} /> : <Plus size={20} />}
+              <span>{showAddGoalForm ? 'Cancelar' : 'Nueva Meta'}</span>
+            </button>
+          </div>
+
+          {showAddGoalForm && (
+            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+              <h4 className="text-lg font-semibold text-gray-700 mb-3">Crear Nueva Meta</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <input
+                  type="text"
+                  placeholder="Nombre de la meta"
+                  value={newGoal.name}
+                  onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Monto Objetivo"
+                  value={newGoal.targetAmount}
+                  onChange={(e) => setNewGoal({ ...newGoal, targetAmount: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Ahorro Inicial (Opcional)"
+                  value={newGoal.currentAmount}
+                  onChange={(e) => setNewGoal({ ...newGoal, currentAmount: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <button
+                  onClick={handleAddGoal}
+                  className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Guardar Meta
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {goals.length === 0 && !showAddGoalForm && (
+              <p className="text-gray-500 col-span-full text-center">No has agregado ninguna meta todavía. ¡Anímate a crear una!</p>
+            )}
             {goals.map(goal => { 
-              const progress = (goal.current / goal.target) * 100;
+              const progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
               return (
-                <div key={goal.id} className="border rounded-lg p-4">
+                <div key={goal.id} className="border rounded-lg p-4 shadow">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-lg font-semibold text-gray-800">{goal.name}</h4>
-                    <Target className="text-blue-500" size={20} />
+                    <div className="flex items-center space-x-2">
+                      <Target className="text-blue-500" size={20} />
+                      <button onClick={() => handleDeleteGoal(goal.id)} className="text-red-400 hover:text-red-600" title="Eliminar meta">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-3">
                     <div className="flex justify-between text-sm text-gray-600">
-                      <span>${goal.current.toLocaleString()}</span>
-                      <span>${goal.target.toLocaleString()}</span>
+                      <span>${(goal.currentAmount || 0).toLocaleString()}</span>
+                      <span>${(goal.targetAmount || 0).toLocaleString()}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-gray-200 rounded-full h-4">
                       <div 
-                        className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-blue-500 to-green-500 h-4 rounded-full transition-all duration-300 text-xs text-white flex items-center justify-center"
                         style={{ width: `${Math.min(progress, 100)}%` }}
-                      ></div>
+                      >
+                       {progress > 10 && `${progress.toFixed(0)}%`} 
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600">{progress.toFixed(1)}% completado</p>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input 
+                      type="number"
+                      placeholder="Añadir progreso"
+                      value={amountToAdd[goal.id] || ''}
+                      onChange={(e) => setAmountToAdd(prev => ({...prev, [goal.id]: e.target.value }))}
+                      className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm w-full"
+                    />
+                    <button 
+                      onClick={() => handleUpdateGoalProgress(goal.id, goal.currentAmount, amountToAdd[goal.id] || '0')}
+                      className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 text-sm"
+                    >
+                      Sumar
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
+        {/* --- FIN SECCIÓN DE METAS --- */}
         
-        {/* --- MODIFICACIÓN: Formulario "Nueva transacción" CON CAMPO DE DESCRIPCIÓN --- */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8"> {/* Formulario Nueva Transacción */}
+          {/* ... (JSX del formulario de Nueva Transacción sin cambios, ya incluye descripción) ... */}
           <h3 className="text-xl font-bold text-gray-800 mb-4">Agregar Nueva Transacción</h3>
-          {/* Ajustado a 6 columnas en lg para acomodar el nuevo campo y el botón en una línea si es posible */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
             <select
               value={newTransaction.type}
@@ -392,14 +518,12 @@ const FinanceDashboard = () => {
               onChange={(e) => setNewTransaction({...newTransaction, category: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            {/* NUEVO CAMPO DE DESCRIPCIÓN */}
             <input
               type="text"
               placeholder="Descripción (Opcional)"
               value={newTransaction.description}
               onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 md:col-span-2 lg:col-span-1" 
-              // Ocupa más espacio en md, normal en lg dentro de las 6 columnas
             />
             <input
               type="date"
@@ -416,10 +540,9 @@ const FinanceDashboard = () => {
             </button>
           </div>
         </div>
-        {/* --- FIN DE MODIFICACIÓN DEL FORMULARIO --- */}
 
-        {/* Lista de transacciones recientes CON BOTÓN DE ELIMINAR */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="bg-white rounded-xl shadow-lg p-6"> {/* Lista de Transacciones */}
+          {/* ... (JSX de la Lista de Transacciones con botón de eliminar sin cambios) ... */}
           <h3 className="text-xl font-bold text-gray-800 mb-4">Transacciones Recientes</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -428,7 +551,7 @@ const FinanceDashboard = () => {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Fecha</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Tipo</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoría</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Descripción</th> {/* Esta columna ya existía y muestra la descripción */}
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Descripción</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Monto</th>
                   <th className="text-center py-3 px-4 font-semibold text-gray-700">Acciones</th>
                 </tr>
@@ -447,7 +570,7 @@ const FinanceDashboard = () => {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-gray-600">{transaction.category}</td>
-                    <td className="py-3 px-4 text-gray-600">{transaction.description}</td> {/* Se muestra la descripción */}
+                    <td className="py-3 px-4 text-gray-600">{transaction.description}</td>
                     <td className={`py-3 px-4 text-right font-semibold ${
                       transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                     }`}>
